@@ -2,7 +2,6 @@
 from tkinter import *
 from socket import *
 import threading
-
 # se define las jugadas de victoria del tateti
 wins=[
     [0,1,2],
@@ -42,7 +41,7 @@ def checkWinner(): # checkea si X o O ganaron
     pass
 
 def dibujar(p, pos): # se dibuja la casilla clickeada, se cambia de turno y se verifica si algun jugador gano
-    casillas[int(pos)].config(text=p)
+    casillas[int(pos)].config(text=p, fg = "#00F" if player=="X" or turn else "#F00", disabledforeground="#00F" if player=="X" and turn else "#F00")
     switch()
     checkWinner()
 
@@ -204,7 +203,9 @@ casillas[8].config(command=lambda: clickear(8), bg="#fff")
 
 # si no es tu turno (si sos la O) se te deshabilitan las casillas
 if(not turn):
+    color = "blue"
     switchState(DISABLED)
+
 
 recieve.start() # se inicia el thread de recibir mensajes
 root.protocol("WM_DELETE_WINDOW", on_closing)
