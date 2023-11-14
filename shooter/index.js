@@ -50,6 +50,14 @@ io.on("connection", async client=>{
             }
         }) 
     })
+    client.on("death",e=>{
+        clients.map(c=>{
+            if (c != client){
+              
+                c.emit('death', e)
+            }
+        }) 
+    })
     client.on("shoot",e=>{
         
         clients.map(c=>{

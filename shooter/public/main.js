@@ -18,6 +18,7 @@ class Jugador {
     this.speed = speed;
     this.vx = 0; // velocidad en el eje x
     this.vy = 0; // velocidad en el eje y
+    this.health = 5
   }
 
   move(dir) {
@@ -68,6 +69,9 @@ class Jugador {
   }
 
   update() {
+    if(this.health <=0){
+      return
+    }
     this.x += this.vx;
     this.y += this.vy;
     if (this.y < 0) {
@@ -133,6 +137,8 @@ class Disparo {
     this.angle = angle;
     this.color = color;
     this.speed = speed;
+    this.distanceTraveled = 0
+    this.hit = false
   }
 
   update() {
@@ -153,8 +159,7 @@ class Disparo {
 
 let player1 = new Jugador(0, 0, 30, 30, "RED", 4); // Reduje la velocidad para un movimiento más suave
 let disparos = [];
-
-canva.addEventListener("click", (e) => {
+const disparar =  (e) => {
   const rect = canva.getBoundingClientRect();
   const targetX = e.clientX - rect.left;
   const targetY = e.clientY - rect.top;
@@ -171,7 +176,7 @@ canva.addEventListener("click", (e) => {
       player1.x + player1.width / 2,
       player1.y + player1.height / 2,
       angle,
-      "green",
+      "RED",
       5
     )
   );
@@ -182,11 +187,12 @@ canva.addEventListener("click", (e) => {
       player1.x + player1.width / 2,
       player1.y + player1.height / 2,
       angle,
-      "yellow",
+      "BLUE",
       5
     )
   );
-});
+}
+canva.addEventListener("click", disparar);
 
 setInterval(() => {
   clear();
@@ -198,8 +204,23 @@ setInterval(() => {
   // Actualizar y dibujar todos los disparos
   disparos.forEach((disparo, index) => {
     disparo.update();
+    if(disparo.color == "BLUE" &&
+      disparo.x > player1.x &&
+      disparo.x < player1.x + player1.width &&
+      disparo.y > player1.y &&
+      disparo.y < player1.y + player1.height &&
+      !disparo.hit 
+    ){
+      disparo.hit = true
+      player1.health-=1
+      if(player1.health == 0){
+        socket.emit("death",player1.health)
+        canva.removeEventListener("click", disparar)
+      }
+    }
     // Eliminar disparo si ha alcanzado su destino
     if (disparo.distanceTraveled > 800) {
+      // console.log(disparo.distanceTraveled)
       disparos.splice(index, 1);
     }
   });
@@ -234,3 +255,6 @@ socket.on("move", (e) => {
   player2.x = e.x;
   player2.y = e.y;
 });
+socket.on("death", e=>{
+  player2.health = 0
+})
