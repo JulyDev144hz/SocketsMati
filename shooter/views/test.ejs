@@ -5,22 +5,16 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <link rel="stylesheet" href="/public/styles.css">
 </head>
 
 <body>
-  Hola mundo
 
+  <canvas id="canva" width="800" height="800"></canvas>
 
   <script src="/socket.io/socket.io.js"></script>
-  <script>
-    const socket = io();
-    socket.on("init", (e) => {
-      console.log(e);
-    });
-    socket.on("message",e=>{
-        console.log(e)
-    })
-  </script>
+  <script src="/public/main.js"></script>
+  
 </body>
 
 </html>
