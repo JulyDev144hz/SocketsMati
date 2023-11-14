@@ -19,6 +19,8 @@ class Jugador {
     this.vx = 0; // velocidad en el eje x
     this.vy = 0; // velocidad en el eje y
     this.health = 5
+    this.tipoArma = 0
+    this.velocidadDeDisparo = 50
   }
 
   move(dir) {
@@ -69,7 +71,7 @@ class Jugador {
   }
 
   update() {
-    if(this.health <=0){
+    if (this.health <= 0) {
       return
     }
     this.x += this.vx;
@@ -93,6 +95,7 @@ class Jugador {
 }
 
 document.addEventListener("keydown", (e) => {
+
   switch (e.key.toLowerCase()) {
     case "w":
       player1.move("N");
@@ -105,6 +108,15 @@ document.addEventListener("keydown", (e) => {
       break;
     case "a":
       player1.move("W");
+      break;
+    case "1":
+      player1.tipoArma = 0
+      break;
+    case "2":
+      player1.tipoArma = 1
+      break;
+    case "3":
+      player1.tipoArma = 2
       break;
     default:
       break;
@@ -131,13 +143,15 @@ document.addEventListener("keyup", (e) => {
 });
 
 class Disparo {
-  constructor(x, y, angle, color, speed) {
+  constructor(x, y, width, angle, color, speed, maxDistance) {
     this.x = x;
     this.y = y;
+    this.width = width
     this.angle = angle;
     this.color = color;
     this.speed = speed;
     this.distanceTraveled = 0
+    this.maxDistance = maxDistance
     this.hit = false
   }
 
@@ -147,7 +161,7 @@ class Disparo {
 
     // Dibujar el disparo
     ctx.beginPath();
-    ctx.arc(this.x, this.y, 5, 0, 2 * Math.PI);
+    ctx.arc(this.x, this.y, this.width, 0, 2 * Math.PI);
     ctx.fillStyle = this.color;
     ctx.fill();
     ctx.closePath();
@@ -159,7 +173,7 @@ class Disparo {
 
 let player1 = new Jugador(0, 0, 30, 30, "RED", 4); // Reduje la velocidad para un movimiento más suave
 let disparos = [];
-const disparar =  (e) => {
+const disparar = (e) => {
   const rect = canva.getBoundingClientRect();
   const targetX = e.clientX - rect.left;
   const targetY = e.clientY - rect.top;
@@ -171,28 +185,114 @@ const disparar =  (e) => {
 
   // Agregar un nuevo disparo a la lista
 
-  disparos.push(
-    new Disparo(
-      player1.x + player1.width / 2,
-      player1.y + player1.height / 2,
+  let posx = player1.x + player1.width / 2
+  let posy = player1.y + player1.height / 2
+
+  if (player1.tipoArma == 0) {
+    let width = 10
+    let speed = 7
+    player1.velocidadDeDisparo = 50
+    disparos.push(new Disparo(
+      posx,
+      posy,
+      width,
       angle,
       "RED",
-      5
-    )
-  );
-
-  socket.emit(
-    "shoot",
-    new Disparo(
-      player1.x + player1.width / 2,
-      player1.y + player1.height / 2,
+      speed,
+      400
+    ))
+    socket.emit("shoot", new Disparo(
+      posx,
+      posy,
+      width,
       angle,
       "BLUE",
-      5
-    )
-  );
+      speed,
+      400
+    ))
+  } else if (player1.tipoArma == 1) {
+    let width = 50
+    let speed = 1
+    player1.velocidadDeDisparo = 500
+    disparos.push(new Disparo(
+      posx,
+      posy,
+      width,
+      angle,
+      "RED",
+      speed,
+      800
+    ))
+    socket.emit("shoot", new Disparo(
+      posx,
+      posy,
+      width,
+      angle,
+      "BLUE",
+      speed,
+      800
+    ))
+  } else if (player1.tipoArma == 2) {
+    let width = 20
+    let speed = 20
+    player1.velocidadDeDisparo = 500
+
+    disparos.push(new Disparo(
+      posx,
+      posy,
+      width,
+      angle,
+      "RED",
+      speed,
+      1600
+    ));
+    socket.emit("shoot", new Disparo(
+      posx,
+      posy,
+      width,
+      angle,
+      "BLUE",
+      speed,
+      1600
+    ));
+  }
+
 }
-canva.addEventListener("click", disparar);
+
+let disparando = false;  // Cambié a false para representar el estado de no estar disparando
+let intervalId
+
+
+const dispararOnMove = (e) => {
+  if (disparando) {
+    clearInterval(intervalId);
+    disparar(e);
+    disparando = false
+    intervalId = setInterval(() => {
+      disparando = true
+    }, player1.velocidadDeDisparo);
+  }
+};
+
+const rafaga = () => {
+  disparando = true;
+  if (!intervalId) {
+    intervalId = setInterval(() => disparar(), player1.velocidadDeDisparo);
+  }
+};
+
+const rafagaStop = () => {
+  disparando = false;
+  clearInterval(intervalId);
+  intervalId = null; // Reinicia el ID del intervalo
+};
+
+
+
+canva.addEventListener("mousedown", rafaga);
+canva.addEventListener("mouseup", rafagaStop);
+canva.addEventListener("mousemove", dispararOnMove);
+canva.addEventListener("mouseout", rafagaStop)
 
 setInterval(() => {
   clear();
@@ -204,22 +304,22 @@ setInterval(() => {
   // Actualizar y dibujar todos los disparos
   disparos.forEach((disparo, index) => {
     disparo.update();
-    if(disparo.color == "BLUE" &&
-      disparo.x > player1.x &&
-      disparo.x < player1.x + player1.width &&
-      disparo.y > player1.y &&
-      disparo.y < player1.y + player1.height &&
-      !disparo.hit 
-    ){
+    if (disparo.color == "BLUE" &&
+      (disparo.x > player1.x || disparo.x + disparo.width > player1.x) &&
+      (disparo.x < player1.x + player1.width || disparo.x + disparo.width < player1.x + player1.width) &&
+      (disparo.y > player1.y || disparo.y + disparo.height > player1.y) &&
+      (disparo.y < player1.y + player1.height || disparo.y + disparo.height < player1.y + player1.height) &&
+      !disparo.hit
+    ) {
       disparo.hit = true
-      player1.health-=1
-      if(player1.health == 0){
-        socket.emit("death",player1.health)
+      player1.health -= 1
+      if (player1.health == 0) {
+        socket.emit("death", player1.health)
         canva.removeEventListener("click", disparar)
       }
     }
     // Eliminar disparo si ha alcanzado su destino
-    if (disparo.distanceTraveled > 800) {
+    if (disparo.distanceTraveled > disparo.maxDistance) {
       // console.log(disparo.distanceTraveled)
       disparos.splice(index, 1);
     }
@@ -245,9 +345,11 @@ socket.on("shoot", (e) => {
     new Disparo(
       e.x,
       e.y,
+      e.width,
       e.angle,
       e.color,
-      e.speed
+      e.speed,
+      e.maxDistance
     )
   );
 });
@@ -255,6 +357,6 @@ socket.on("move", (e) => {
   player2.x = e.x;
   player2.y = e.y;
 });
-socket.on("death", e=>{
+socket.on("death", e => {
   player2.health = 0
 })
